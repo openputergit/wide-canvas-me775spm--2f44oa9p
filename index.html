@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body class="bg-gray-100 font-[Inter]">
+    <!-- Login Section -->
+    <div id="loginSection" class="min-h-screen flex items-center justify-center">
+        <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Inventory Management System</h2>
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-gray-700">Username</label>
+                    <input type="text" id="username" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700">Password</label>
+                    <input type="password" id="password" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboardSection" class="hidden min-h-screen">
+        <nav class="bg-white shadow-lg p-4">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-xl font-bold">Inventory Dashboard</h1>
+                <button id="logoutBtn" class="text-gray-600 hover:text-gray-800">
+                    <i class="bi bi-box-arrow-right text-xl"></i>
+                </button>
+            </div>
+        </nav>
+
+        <div class="container mx-auto p-4">
+            <!-- Add Item Form -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-lg font-semibold mb-4">Add New Item</h2>
+                <form id="addItemForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <input type="text" id="itemName" placeholder="Item Name" class="p-2 border rounded" required>
+                    <input type="number" id="itemQuantity" placeholder="Quantity" class="p-2 border rounded" required>
+                    <input type="number" id="itemPrice" placeholder="Price" class="p-2 border rounded" required>
+                    <button type="submit" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">Add Item</button>
+                </form>
+            </div>
+
+            <!-- Inventory Table -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold">Inventory List</h2>
+                    <input type="text" id="searchInput" placeholder="Search items..." class="p-2 border rounded">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="p-3 text-left">Name</th>
+                                <th class="p-3 text-left">Quantity</th>
+                                <th class="p-3 text-left">Price</th>
+                                <th class="p-3 text-left">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock user credentials
+        const validCredentials = {
+            username: 'admin',
+            password: 'admin123'
+        };
+
+        // Initialize inventory data
+        let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+
+        // DOM Elements
+        const loginSection = document.getElementById('loginSection');
+        const dashboardSection = document.getElementById('dashboardSection');
+        const loginForm = document.getElementById('loginForm');
+        const addItemForm = document.getElementById('addItemForm');
+        const inventoryList = document.getElementById('inventoryList');
+        const searchInput = document.getElementById('searchInput');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        // Login Handler
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username === validCredentials.username && password === validCredentials.password) {
+                loginSection.classList.add('hidden');
+                dashboardSection.classList.remove('hidden');
+                renderInventory();
+            } else {
+                alert('Invalid credentials!');
+            }
+        });
+
+        // Logout Handler
+        logoutBtn.addEventListener('click', () => {
+            loginSection.classList.remove('hidden');
+            dashboardSection.classList.add('hidden');
+            loginForm.reset();
+        });
+
+        // Add Item Handler
+        addItemForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const itemName = document.getElementById('itemName').value;
+            const itemQuantity = document.getElementById('itemQuantity').value;
+            const itemPrice = document.getElementById('itemPrice').value;
+
+            const newItem = {
+                id: Date.now(),
+                name: itemName,
+                quantity: parseInt(itemQuantity),
+                price: parseFloat(itemPrice)
+            };
+
+            inventory.push(newItem);
+            saveToLocalStorage();
+            renderInventory();
+            addItemForm.reset();
+        });
+
+        // Search Handler
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredInventory = inventory.filter(item => 
+                item.name.toLowerCase().includes(searchTerm)
+            );
+            renderInventory(filteredInventory);
+        });
+
+        // Render Inventory
+        function renderInventory(items = inventory) {
+            inventoryList.innerHTML = items.map(item => `
+                <tr class="border-b">
+                    <td class="p-3">${item.name}</td>
+                    <td class="p-3">${item.quantity}</td>
+                    <td class="p-3">$${item.price.toFixed(2)}</td>
+                    <td class="p-3">
+                        <button onclick="editItem(${item.id})" class="text-blue-500 hover:text-blue-700 mr-2">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button onclick="deleteItem(${item.id})" class="text-red-500 hover:text-red-700">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Edit Item
+        function editItem(id) {
+            const item = inventory.find(item => item.id === id);
+            const newName = prompt('Enter new name:', item.name);
+            const newQuantity = prompt('Enter new quantity:', item.quantity);
+            const newPrice = prompt('Enter new price:', item.price);
+
+            if (newName && newQuantity && newPrice) {
+                item.name = newName;
+                item.quantity = parseInt(newQuantity);
+                item.price = parseFloat(newPrice);
+                saveToLocalStorage();
+                renderInventory();
+            }
+        }
+
+        // Delete Item
+        function deleteItem(id) {
+            if (confirm('Are you sure you want to delete this item?')) {
+                inventory = inventory.filter(item => item.id !== id);
+                saveToLocalStorage();
+                renderInventory();
+            }
+        }
+
+        // Save to LocalStorage
+        function saveToLocalStorage() {
+            localStorage.setItem('inventory', JSON.stringify(inventory));
+        }
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
